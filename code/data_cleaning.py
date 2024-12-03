@@ -46,27 +46,50 @@ def clean_data(data):
     # Remove colons, years, dates, empty parentheses, and unnecessary text from roles
     print("Cleaning role names...")
     def clean_role(role):
-        
-        # Remove years and date patterns (e.g., "2025Software Engineer")
+        # Remove years and date patterns
         role = re.sub(r"\b(20[0-9]{2})\b", '', role)  # Remove standalone years like "2025"
         role = re.sub(r"(\d{1,2}/\d{1,2}/\d{2,4})", '', role)  # Remove date formats like "MM/DD/YYYY"
-
-        # Remove unnecessary colons (e.g., "Oracle,: Software Engineer")
-        role = re.sub(r"^[^a-zA-Z0-9]*", '', role)  # Remove leading colons or special characters
-        role = re.sub(r":[^a-zA-Z0-9]*", '', role)  # Remove colons followed by spaces or non-characters
 
         # Remove unnecessary text like "New Grad", "Entry Level", "2025 Start"
         keywords_to_remove = ['new grad', 'entry level', 'early career', 'start']
         for keyword in keywords_to_remove:
             role = re.sub(rf'\b{keyword}\b', '', role, flags=re.IGNORECASE)
 
-        # Remove empty parentheses and extra dashes
+        # Remove unnecessary colons, trailing/leading spaces, and extra dashes
+        role = re.sub(r"^[^a-zA-Z0-9]*", '', role)  # Remove leading colons or special characters
+        role = re.sub(r":[^a-zA-Z0-9]*", '', role)  # Remove colons followed by spaces or non-characters
         role = re.sub(r'\(\s*\)', '', role)  # Remove empty parentheses
         role = re.sub(r'\s*-\s*$', '', role)  # Remove trailing dashes with or without spaces
-        role = re.sub(r'\s*-\s*', ' - ', role)  # Ensure single space around valid hyphens
+        role = re.sub(r'\s*-\s*', ' - ', role)  # Normalize hyphens
         role = re.sub(r'\s{2,}', ' ', role).strip()  # Remove excess whitespace
 
+        # Extract core role by removing qualifiers
+        role = role.split(',')[0]  # Keep only the part before the first comma
+        role = re.sub(r'(,|:).*$', '', role).strip()  # Remove remaining commas/colons
+
+        # Normalize the role for common groupings
+        role_lower = role.lower()
+        if 'software engineer' in role_lower:
+            role = 'Software Engineer'
+        elif 'data scientist' in role_lower:
+            role = 'Data Scientist'
+        elif 'project manager' in role_lower:
+            role = 'Project Manager'
+        elif 'product manager' in role_lower:
+            role = 'Product Manager'
+        elif 'engineer' in role_lower:
+            role = 'Engineer'
+        elif 'developer' in role_lower:
+            role = 'Developer'
+        elif 'analyst' in role_lower:
+            role = 'Analyst'
+        elif 'director' in role_lower:
+            role = 'Director'
+
+        # Final normalization for casing
+        role = role.title()  # Capitalize words for consistency
         return role.strip()
+
 
     data['role'] = data['role'].apply(clean_role)
 

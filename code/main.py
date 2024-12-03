@@ -2,6 +2,7 @@ import io
 import pandas as pd
 import dependencies as d
 import data_cleaning as dc
+import ui
 
 pd.set_option('display.max_columns', None)
 
@@ -81,3 +82,11 @@ cleaned_data = dc.clean_data(data)
 # Output cleaned data to a CSV for inspection
 cleaned_data.to_csv('cleaned_jobs_data.csv', index=False)
 print("Cleaned data saved to 'cleaned_jobs_data.csv'.")
+
+'''
+Launch Dashboard
+'''
+
+# Launch the Tkinter dashboard
+print("Launching the job analysis dashboard...")
+ui.launch_ui(cleaned_data)
