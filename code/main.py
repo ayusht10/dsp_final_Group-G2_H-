@@ -19,20 +19,21 @@ download_links = [link['href'] for link in soup.find_all('a', href=True) if link
 
 '''
 DEFINITE VERSION CODE
+'''
 
 # Making dataframe with csv file downloaded
 soup = d.scrap(download_links[0])
 df_ny = d.format_ny(pd.read_csv(io.StringIO(soup.text)))
-'''
+
 
 '''
 TEMPORARY CODE FOR FASTER RUNNING
-'''
+
 
 # Making dataframe from local csv file
-local_path = '/Users/lucas.oliveira/Library/CloudStorage/OneDrive-ChathamUniversity/Classes/Fall 2024/Data Focused Python/Final Project/Jobs_NYC_Postings.csv'
+local_path = '/Users/ayushtripathi/dsp_final_Group-G2_H-/testing_data/Jobs_NYC_Postings.csv'
 df_ny = d.format_ny(pd.read_csv(local_path))
-
+'''
 '''
 Cvrve Jobs
 '''
@@ -78,7 +79,4 @@ Data Analysis
 # Combining dataframes into one
 data = pd.concat([df_jobright, df_cvrve, df_ny], ignore_index=True)
 print(data.shape)
-print(data.head())
-
-
-
+print(data.head(5))
