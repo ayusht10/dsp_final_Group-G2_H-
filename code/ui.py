@@ -139,6 +139,12 @@ class JobAnalysisApp:
         role_entry = tk.Entry(filter_frame, textvariable=role_var)
         role_entry.grid(row=0, column=5, padx=5)
 
+        # Input box for company
+        tk.Label(filter_frame, text="Company:", font=("Arial", 12)).grid(row=1, column=0, padx=5)
+        company_var = tk.StringVar()
+        company_entry = tk.Entry(filter_frame, textvariable=company_var)
+        company_entry.grid(row=1, column=1, padx=5)
+
         # Filter button
         def apply_filters():
             filtered = self.data
@@ -148,13 +154,18 @@ class JobAnalysisApp:
                 filtered = filtered[filtered['industry'] == industry_var.get()]
             if role_var.get():
                 filtered = filtered[filtered['role'].str.contains(role_var.get(), case=False, na=False)]
+            if company_var.get():
+                filtered = filtered[filtered['company'].str.contains(company_var.get(), case=False, na=False)]
             self.filtered_data = filtered
             update_table()
 
-        tk.Button(filter_frame, text="Apply Filters", command=apply_filters).grid(row=0, column=6, padx=5)
+        tk.Button(filter_frame, text="Apply Filters", command=apply_filters).grid(row=1, column=2, padx=5)
 
         # Data table
-        tree = ttk.Treeview(self.data_tab, columns=visible_columns, show="headings", height=20)
+        table_frame = tk.Frame(self.data_tab)
+        table_frame.pack(fill=tk.BOTH, expand=True)
+
+        tree = ttk.Treeview(table_frame, columns=visible_columns, show="headings", height=20)
         for col in visible_columns:
             tree.heading(col, text=col)
             tree.column(col, width=150 if col != 'application/link' else 300, anchor="w")
