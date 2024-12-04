@@ -22,22 +22,22 @@ download_links = [link['href'] for link in soup.find_all('a', href=True) if link
 
 '''
 TEMPORARY CODE FOR FASTER RUNNING
-'''
+
 
 # Making dataframe from local csv file
 local_path = 'Jobs_NYC_Postings.csv'
 df_ny_temp = d.format_ny(pd.read_csv(local_path))
+'''
 
 '''
 DEFINITE VERSION CODE
-
+'''
 # Making dataframe with csv file downloaded
 soup = d.scrap(download_links[0])
 df_ny = d.format_ny(pd.read_csv(io.StringIO(soup.text)))
-'''
 
-# Use temporary version for now
-df_ny = df_ny_temp
+
+
 
 '''
 Cvrve Jobs
@@ -85,9 +85,6 @@ Heinz Jobs
 df_heinz_raw = pd.read_csv("heinz_newsletter_postings.csv")
 df_heinz = cc.clean_heinz_csv(df_heinz_raw)
 
-print("Cleaned Heinz Data:")
-print(df_heinz.head())
-
 '''
 Data Cleaning and Combining
 '''
@@ -100,19 +97,10 @@ df_jobright.columns = ['company', 'role', 'location', 'application/link', 'work_
 # Combine all dataframes
 data = pd.concat([df_jobright, df_cvrve, df_ny, df_heinz], ignore_index=True)
 
-print("Combined Data Before Cleaning:")
-print(data.head())
-
-# Save raw combined data for inspection
-data.to_csv('raw_jobs_data.csv', index=False)
-print("Raw data saved to 'raw_jobs_data.csv'.")
 
 # Clean combined data
 cleaned_data = dc.clean_data(data)
 
-# Save cleaned data for inspection
-cleaned_data.to_csv('cleaned_jobs_data.csv', index=False)
-print("Cleaned data saved to 'cleaned_jobs_data.csv'.")
 
 '''
 Launch Dashboard
