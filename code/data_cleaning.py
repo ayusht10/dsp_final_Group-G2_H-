@@ -7,19 +7,15 @@ def clean_data(data):
     :param data: Raw job data (DataFrame)
     :return: Cleaned job data (DataFrame)
     """
-    print("Standardizing column names...")
     data.columns = data.columns.str.lower().str.replace(' ', '_')
 
-    print("Handling missing values...")
     data['location'] = data['location'].fillna('Unknown')
     data['role'] = data['role'].fillna('Unknown')
     data['application/link'] = data['application/link'].fillna('Unknown')
     data['work_model'] = data['work_model'].fillna('Unspecified')
 
-    print("Removing duplicate rows...")
     data = data.drop_duplicates()
 
-    print("Validating and cleaning columns...")
     data['date_posted'] = pd.to_datetime(data['date_posted'], errors='coerce')
     
     # Remove invalid or future dates
@@ -41,7 +37,6 @@ def clean_data(data):
     data['location'] = data['location'].str.strip().str.title()
     data['work_model'] = data['work_model'].str.strip().str.capitalize()
 
-    print("Cleaning role names...")
     def clean_role(role):
         role = re.sub(r"\b(20[0-9]{2})\b", '', role)
         role = re.sub(r"(\d{1,2}/\d{1,2}/\d{2,4})", '', role)
@@ -62,7 +57,6 @@ def clean_data(data):
 
     data['role'] = data['role'].apply(clean_role)
 
-    print("Normalizing state abbreviations in location...")
     us_state_abbrev = {  # State abbreviations mapping
         "Al": "AL", "Ak": "AK", "Az": "AZ", "Ar": "AR", "Ca": "CA", 
         "Co": "CO", "Ct": "CT", "De": "DE", "Fl": "FL", "Ga": "GA", 
@@ -83,14 +77,12 @@ def clean_data(data):
 
     data['location'] = data['location'].apply(normalize_location)
 
-    print("Creating location categories...")
     location_counts = data['location'].value_counts()
     top_locations = location_counts.head(5).index
     data['location_category'] = data['location'].apply(
         lambda x: x if x in top_locations else 'Others'
     )
 
-    print("Extracting industry from roles...")
     def infer_industry(role):
         if 'engineer' in role.lower():
             return 'Engineering'
@@ -111,7 +103,6 @@ def clean_data(data):
 
     data['industry'] = data['role'].apply(infer_industry)
 
-    print("Removing emojis...")
     def remove_emojis(text):
         emoji_pattern = re.compile(
             "["

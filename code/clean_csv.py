@@ -6,8 +6,6 @@ def clean_heinz_csv(data):
     :param data: Raw Heinz job data
     :return: Cleaned DataFrame
     """
-    print("Original Heinz Data:")
-    print(data.head())
 
     # Map and rename columns
     data = data.rename(columns={
@@ -28,7 +26,6 @@ def clean_heinz_csv(data):
     data = data[~data['role'].str.contains("intern", case=False, na=False)]
 
     # Normalize the industry column for consistency
-    print("Normalizing industries in Heinz CSV...")
     def normalize_industry(industry):
         known_industries = {
             "Data": "Analytics",
@@ -47,8 +44,5 @@ def clean_heinz_csv(data):
 
     # Standardize date format
     data['date_posted'] = pd.to_datetime(data['date_posted'], errors='coerce').dt.strftime('%Y-%m-%d')
-
-    print("Cleaned Heinz CSV data:")
-    print(data.head())
 
     return data

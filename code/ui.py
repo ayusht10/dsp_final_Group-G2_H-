@@ -3,25 +3,52 @@ from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import webbrowser
 import data_analysis as da
+from queue import Empty
+import sys
+
 
 
 class JobAnalysisApp:
-    def __init__(self, root, data):
+    def __init__(self, root, data_queue):
         self.root = root
-        self.data = data  # Use the full dataset but exclude unnecessary columns in display
-        self.filtered_data = data.copy()  # To store filtered data
+        self.data_queue = data_queue
+        self.data = None
+        self.filtered_data = None  # To store filtered data
         self.root.title("Job Analysis Dashboard")
         self.root.geometry("1200x800")
+
+        # Bind the on_closing event to properly close the app
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # Create a container for all frames
         self.frames = {}
 
         # Initialize frames
+        self.init_loading_frame()
         self.init_home_frame()
         self.init_dashboard_frame()
 
-        # Show the home screen by default
-        self.show_frame("Home")
+        # Show the loading screen initially
+        self.show_frame("Loading")
+
+        # Start checking the data queue
+        self.check_data_queue()
+
+    def init_loading_frame(self):
+        """Initialize the loading screen frame."""
+        frame = tk.Frame(self.root)
+        self.frames["Loading"] = frame
+
+        # Add a loading message
+        loading_label = tk.Label(
+            frame,
+            text="Loading data... Please wait.",
+            font=("Arial", 20),
+            pady=50
+        )
+        loading_label.pack()
+
+        frame.pack(fill=tk.BOTH, expand=True)
 
     def init_home_frame(self):
         """Initialize the welcome screen frame."""
@@ -84,12 +111,6 @@ class JobAnalysisApp:
         tab_control.add(self.data_tab, text="Data Table")
 
         tab_control.pack(expand=1, fill="both")
-
-        # Add content to each tab
-        self.display_location_analysis()
-        self.display_date_analysis()
-        self.display_role_analysis()
-        self.display_data_table()
 
         frame.pack(fill=tk.BOTH, expand=True)
 
@@ -192,6 +213,31 @@ class JobAnalysisApp:
         tree.bind("<<TreeviewSelect>>", on_tree_select)
         tree.pack(fill=tk.BOTH, expand=True)
 
+    def check_data_queue(self):
+        """Check if the data is ready and transition to the home screen."""
+        try:
+            data = self.data_queue.get_nowait()
+            if isinstance(data, Exception):
+                raise data  # Raise exception if data preparation failed
+            self.data = data
+            self.filtered_data = data.copy()
+
+            # Initialize content for the dashboard
+            self.display_location_analysis()
+            self.display_date_analysis()
+            self.display_role_analysis()
+            self.display_data_table()
+
+            # Transition to the home screen
+            self.show_frame("Home")
+        except Empty:
+            self.root.after(100, self.check_data_queue)
+
+    def on_closing(self):
+        """Handle closing of the application."""
+        print("Exiting the application...")
+        self.root.destroy()
+
     def show_frame(self, name):
         """Show a specific frame."""
         for frame in self.frames.values():
@@ -200,6 +246,17 @@ class JobAnalysisApp:
 
 
 def launch_ui(data):
+    """
+    Launch the Tkinter application with a loading screen.
+    """
     root = tk.Tk()
     app = JobAnalysisApp(root, data)
+
+    # Override the default close behavior
+    def on_closing():
+        print("Exiting the application...")
+        root.destroy()
+        sys.exit(0)  # Ensure the Python process exits completely
+
+    root.protocol("WM_DELETE_WINDOW", on_closing)  # Set the custom close behavior
     root.mainloop()
