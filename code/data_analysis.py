@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from tkinter import Tk, ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.dates as mdates
 
 
 def get_location_figure(data):
@@ -15,7 +16,6 @@ def get_location_figure(data):
         others = location_counts[5:].sum()
         if others > 0:
             top_locations['Others'] = others
-
 
         # Plot the pie chart
         figure, ax = plt.subplots(figsize=(8, 8))
@@ -31,8 +31,8 @@ def get_location_figure(data):
             wedges,
             top_locations.index,
             title="Locations",
-            loc="upper left",
-            bbox_to_anchor=(1, 0.8),
+            loc="center left",
+            bbox_to_anchor=(1, 0.5),
             fontsize=9,
         )
         return figure
@@ -45,32 +45,73 @@ def get_location_figure(data):
         raise e
 
 
-
 def get_dates_figure(data):
     """
-    Generate a time series plot of job postings over time by industry with a legend.
+    Generate a time series plot of job postings over time by industry with a rolling average and a properly positioned legend.
     """
-    if not pd.api.types.is_datetime64_any_dtype(data['date_posted']):
-        data['date_posted'] = pd.to_datetime(data['date_posted'], errors='coerce')
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
 
-    industry_date_counts = data.groupby(['industry', 'date_posted']).size().unstack(fill_value=0)
+    try:
+        # Ensure 'date_posted' is in datetime format
+        if not pd.api.types.is_datetime64_any_dtype(data['date_posted']):
+            data['date_posted'] = pd.to_datetime(data['date_posted'], errors='coerce')
 
-    figure, ax = plt.subplots(figsize=(12, 6))
-    for industry in industry_date_counts.index:
-        ax.plot(
-            industry_date_counts.columns,
-            industry_date_counts.loc[industry],
-            label=industry,
-            marker='o',
+        # Filter valid dates and group data by industry and date
+        valid_data = data.dropna(subset=['date_posted'])
+        industry_date_counts = valid_data.groupby(['industry', 'date_posted']).size().unstack(fill_value=0)
+
+        # Apply a rolling average (e.g., 7-day window)
+        rolling_window = 7
+        smoothed_data = industry_date_counts.T.rolling(window=rolling_window, min_periods=1).mean().T
+
+        # Plot the smoothed time series
+        figure, ax = plt.subplots(figsize=(8, 4))  # Smaller figure dimensions
+        for industry in smoothed_data.index:
+            ax.plot(
+                smoothed_data.columns,
+                smoothed_data.loc[industry],
+                label=industry,
+                marker=None,  # No markers to reduce clutter
+            )
+
+        # Set axis labels and title
+        ax.set_title('Job Postings Over Time by Industry', fontsize=12, pad=10)  # Adjust title font size and padding
+        ax.set_xlabel('Date Posted', fontsize=10)
+        ax.set_ylabel('Average Number of Postings', fontsize=8)
+
+        # Format the x-axis to avoid overlapping
+        ax.xaxis.set_major_locator(mdates.YearLocator())  # Major ticks every year
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))  # Format as Year-Month
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right', fontsize=6)
+
+        # Add grid
+        ax.grid(True)
+
+        # Adjust layout and legend position
+        figure.subplots_adjust(bottom=0.4)  # Add more space at the bottom
+        ax.legend(
+            title='Industry',
+            fontsize=6,
+            title_fontsize=7,
+            loc='upper center',
+            bbox_to_anchor=(0.5, -0.25),  # Center the legend below the figure
+            ncol=3,  # Split into 3 columns to fit better
         )
 
-    ax.set_title('Job Postings Over Time by Industry', fontsize=16)
-    ax.set_xlabel('Date Posted', fontsize=12)
-    ax.set_ylabel('Number of Job Postings', fontsize=12)
-    ax.grid(True)
-    ax.legend(title='Industry', fontsize=10, loc='upper left', bbox_to_anchor=(1, 1))
-    plt.tight_layout()
-    return figure
+        # Tight layout to avoid clipping
+        plt.tight_layout()
+
+        return figure
+
+    except KeyError as e:
+        print("KeyError: Missing 'date_posted' or 'industry' column in data. Please check the dataset.")
+        raise e
+    except Exception as e:
+        print("An error occurred while creating the line chart:", str(e))
+        raise e
+
 
 
 def get_roles_figure(data):
@@ -78,11 +119,11 @@ def get_roles_figure(data):
     Generate a bar chart of the most common job roles.
     """
     role_counts = data['role'].value_counts().head(10)
-    figure, ax = plt.subplots(figsize=(10, 5))
+    figure, ax = plt.subplots(figsize=(10, 4))
     role_counts.plot(kind='bar', ax=ax, color='skyblue')
     ax.set_title('Top 10 Job Roles', fontsize=16)
     ax.set_xlabel('Role', fontsize=12)
-    ax.set_ylabel('Number of Postings', fontsize=12)
+    ax.set_ylabel('Number of Postings', fontsize=8)
     ax.set_xticklabels(role_counts.index, rotation=45, fontsize=8)
     plt.tight_layout()
     return figure
