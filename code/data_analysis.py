@@ -45,63 +45,61 @@ def get_location_figure(data):
         raise e
 
 
+
 def get_dates_figure(data):
     """
-    Generate a time series plot of job postings over time by industry with a rolling average and a properly positioned legend.
+    Generate a time series plot of job postings over time by industry with better visualization.
     """
-    import pandas as pd
-    import matplotlib.pyplot as plt
-    import matplotlib.dates as mdates
-
     try:
         # Ensure 'date_posted' is in datetime format
         if not pd.api.types.is_datetime64_any_dtype(data['date_posted']):
             data['date_posted'] = pd.to_datetime(data['date_posted'], errors='coerce')
 
-        # Filter valid dates and group data by industry and date
+        # Filter out rows where industry is "Other"
+        data = data[data['industry'] != 'Other']
+
+        # Filter valid dates and group by industry and date
         valid_data = data.dropna(subset=['date_posted'])
         industry_date_counts = valid_data.groupby(['industry', 'date_posted']).size().unstack(fill_value=0)
 
-        # Apply a rolling average (e.g., 7-day window)
-        rolling_window = 7
+        # Apply a rolling average (e.g., 30-day window)
+        rolling_window = 30  # Use a 30-day window for a smoother line
         smoothed_data = industry_date_counts.T.rolling(window=rolling_window, min_periods=1).mean().T
 
-        # Plot the smoothed time series
-        figure, ax = plt.subplots(figsize=(8, 4))  # Smaller figure dimensions
+        # Create the plot
+        figure, ax = plt.subplots(figsize=(12, 6))  # Adjust the figure size
         for industry in smoothed_data.index:
             ax.plot(
                 smoothed_data.columns,
                 smoothed_data.loc[industry],
-                label=industry,
-                marker=None,  # No markers to reduce clutter
+                label=industry
             )
 
-        # Set axis labels and title
-        ax.set_title('Job Postings Over Time by Industry', fontsize=12, pad=10)  # Adjust title font size and padding
-        ax.set_xlabel('Date Posted', fontsize=10)
-        ax.set_ylabel('Average Number of Postings', fontsize=8)
-
-        # Format the x-axis to avoid overlapping
+        # Format the x-axis to reduce tick density
         ax.xaxis.set_major_locator(mdates.YearLocator())  # Major ticks every year
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))  # Format as Year-Month
-        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right', fontsize=6)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))  # Format as Year only
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right', fontsize=10)  # Rotate labels for readability
 
-        # Add grid
-        ax.grid(True)
+        # Simplify gridlines
+        ax.grid(True, linestyle='--', linewidth=0.5, alpha=0.7)  # Thinner, less prominent gridlines
 
-        # Adjust layout and legend position
-        figure.subplots_adjust(bottom=0.4)  # Add more space at the bottom
+        # Add labels and title
+        ax.set_title('Job Postings Over Time by Industry', fontsize=14)
+        ax.set_xlabel('Date Posted', fontsize=12)
+        ax.set_ylabel('Average Number of Postings', fontsize=12)
+
+        # Adjust the legend
         ax.legend(
             title='Industry',
-            fontsize=6,
-            title_fontsize=7,
+            fontsize=9,
+            title_fontsize=10,
             loc='upper center',
-            bbox_to_anchor=(0.5, -0.25),  # Center the legend below the figure
-            ncol=3,  # Split into 3 columns to fit better
+            bbox_to_anchor=(0.5, -0.3),  # Move legend below the plot
+            ncol=4  # Reduce number of columns if necessary
         )
 
-        # Tight layout to avoid clipping
-        plt.tight_layout()
+        # Adjust layout to prevent overlaps
+        plt.tight_layout(rect=[0.1, 0.1, 1, 1])  # Add padding below for legend
 
         return figure
 
@@ -111,9 +109,7 @@ def get_dates_figure(data):
     except Exception as e:
         print("An error occurred while creating the line chart:", str(e))
         raise e
-
-
-
+    
 def get_roles_figure(data):
     """
     Generate a bar chart of the most common job roles.

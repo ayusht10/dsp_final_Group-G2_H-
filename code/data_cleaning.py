@@ -7,30 +7,28 @@ def clean_data(data):
     :param data: Raw job data (DataFrame)
     :return: Cleaned job data (DataFrame)
     """
-
-    # Step 1: Standardize column names
     print("Standardizing column names...")
     data.columns = data.columns.str.lower().str.replace(' ', '_')
 
-    # Step 2: Handle missing values
     print("Handling missing values...")
     data['location'] = data['location'].fillna('Unknown')
     data['role'] = data['role'].fillna('Unknown')
     data['application/link'] = data['application/link'].fillna('Unknown')
     data['work_model'] = data['work_model'].fillna('Unspecified')
 
-    # Step 3: Remove duplicates
     print("Removing duplicate rows...")
     data = data.drop_duplicates()
 
-    # Step 4: Validate and clean columns
     print("Validating and cleaning columns...")
-
-    # Convert 'date_posted' to datetime
     data['date_posted'] = pd.to_datetime(data['date_posted'], errors='coerce')
+    
+    # Remove invalid or future dates
+    today = pd.Timestamp.today()
+    data = data[(data['date_posted'].notnull()) & (data['date_posted'] <= today)]
+
+    # Fill missing dates with a placeholder if required (optional)
     data['date_posted'] = data['date_posted'].fillna(pd.Timestamp.min)
 
-    # Normalize text fields and preserve proper casing for acronyms
     def normalize_text(text):
         acronyms = ['AI/ML', 'PhD', 'IoT', 'API', 'iOS', 'AI&ML', 'OCI', 'IT', 'DS', 'MS', 'BS', 'BS/MS', 'AI', 'ML', 'SQL']
         words = text.split()
@@ -43,59 +41,29 @@ def clean_data(data):
     data['location'] = data['location'].str.strip().str.title()
     data['work_model'] = data['work_model'].str.strip().str.capitalize()
 
-    # Remove colons, years, dates, empty parentheses, and unnecessary text from roles
     print("Cleaning role names...")
     def clean_role(role):
-        # Remove years and date patterns
-        role = re.sub(r"\b(20[0-9]{2})\b", '', role)  # Remove standalone years like "2025"
-        role = re.sub(r"(\d{1,2}/\d{1,2}/\d{2,4})", '', role)  # Remove date formats like "MM/DD/YYYY"
-
-        # Remove unnecessary text like "New Grad", "Entry Level", "2025 Start"
+        role = re.sub(r"\b(20[0-9]{2})\b", '', role)
+        role = re.sub(r"(\d{1,2}/\d{1,2}/\d{2,4})", '', role)
         keywords_to_remove = ['new grad', 'entry level', 'early career', 'start']
         for keyword in keywords_to_remove:
             role = re.sub(rf'\b{keyword}\b', '', role, flags=re.IGNORECASE)
+        role = re.sub(r"^[^a-zA-Z0-9]*", '', role)
+        role = re.sub(r":[^a-zA-Z0-9]*", '', role)
+        role = re.sub(r'\(\s*\)', '', role)
+        role = re.sub(r'\s*-\s*$', '', role)
+        role = re.sub(r'\s*-\s*', ' - ', role)
+        role = re.sub(r'\s{2,}', ' ', role).strip()
 
-        # Remove unnecessary colons, trailing/leading spaces, and extra dashes
-        role = re.sub(r"^[^a-zA-Z0-9]*", '', role)  # Remove leading colons or special characters
-        role = re.sub(r":[^a-zA-Z0-9]*", '', role)  # Remove colons followed by spaces or non-characters
-        role = re.sub(r'\(\s*\)', '', role)  # Remove empty parentheses
-        role = re.sub(r'\s*-\s*$', '', role)  # Remove trailing dashes with or without spaces
-        role = re.sub(r'\s*-\s*', ' - ', role)  # Normalize hyphens
-        role = re.sub(r'\s{2,}', ' ', role).strip()  # Remove excess whitespace
-
-        # Extract core role by removing qualifiers
-        role = role.split(',')[0]  # Keep only the part before the first comma
-        role = re.sub(r'(,|:).*$', '', role).strip()  # Remove remaining commas/colons
-
-        # Normalize the role for common groupings
-        role_lower = role.lower()
-        if 'software engineer' in role_lower:
-            role = 'Software Engineer'
-        elif 'data scientist' in role_lower:
-            role = 'Data Scientist'
-        elif 'project manager' in role_lower:
-            role = 'Project Manager'
-        elif 'product manager' in role_lower:
-            role = 'Product Manager'
-        elif 'engineer' in role_lower:
-            role = 'Engineer'
-        elif 'developer' in role_lower:
-            role = 'Developer'
-        elif 'analyst' in role_lower:
-            role = 'Analyst'
-        elif 'director' in role_lower:
-            role = 'Director'
-
-        # Final normalization for casing
-        role = role.title()  # Capitalize words for consistency
+        role = role.split(',')[0]
+        role = re.sub(r'(,|:).*$', '', role).strip()
+        role = role.title()
         return role.strip()
-
 
     data['role'] = data['role'].apply(clean_role)
 
-    # Normalize state abbreviations in location
     print("Normalizing state abbreviations in location...")
-    us_state_abbrev = {
+    us_state_abbrev = {  # State abbreviations mapping
         "Al": "AL", "Ak": "AK", "Az": "AZ", "Ar": "AR", "Ca": "CA", 
         "Co": "CO", "Ct": "CT", "De": "DE", "Fl": "FL", "Ga": "GA", 
         "Hi": "HI", "Id": "ID", "Il": "IL", "In": "IN", "Ia": "IA", "Ks": "KS", 
@@ -115,7 +83,6 @@ def clean_data(data):
 
     data['location'] = data['location'].apply(normalize_location)
 
-    # Step 5: Create a location category column
     print("Creating location categories...")
     location_counts = data['location'].value_counts()
     top_locations = location_counts.head(5).index
@@ -123,7 +90,6 @@ def clean_data(data):
         lambda x: x if x in top_locations else 'Others'
     )
 
-    # Step 6: Extract industry from the role column
     print("Extracting industry from roles...")
     def infer_industry(role):
         if 'engineer' in role.lower():
@@ -138,12 +104,13 @@ def clean_data(data):
             return 'Development'
         elif 'scientist' in role.lower():
             return 'Research'
+        elif 'cyber' in role.lower():
+            return 'Cybersecurity'
         else:
             return 'Other'
 
     data['industry'] = data['role'].apply(infer_industry)
 
-    # Step 7: Remove emojis from text columns
     print("Removing emojis...")
     def remove_emojis(text):
         emoji_pattern = re.compile(
@@ -157,7 +124,7 @@ def clean_data(data):
         return emoji_pattern.sub(r'', text)
 
     data['role'] = data['role'].apply(remove_emojis)
+    data['location'] = data['location'].apply(remove_emojis)
 
-    # Return the cleaned data
     print("Cleaning complete.")
     return data
