@@ -6,31 +6,44 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 def get_location_figure(data):
     """
-    Generate a pie chart of job locations with a legend.
+    Generate a pie chart of job locations without labels on the pie chart but with a legend.
     """
-    location_counts = data['location_category'].value_counts(normalize=True) * 100
-    top_locations = location_counts.head(5)
-    others = location_counts[5:].sum()
-    top_locations['Others'] = others
+    try:
+        # Get top 5 locations and group the rest as "Others"
+        location_counts = data['location_category'].value_counts(normalize=True) * 100
+        top_locations = location_counts.head(5)
+        others = location_counts[5:].sum()
+        if others > 0:
+            top_locations['Others'] = others
 
-    figure, ax = plt.subplots(figsize=(8, 8))
-    wedges, texts, autotexts = ax.pie(
-        top_locations,
-        labels=top_locations.index,
-        autopct='%1.1f%%',
-        startangle=140,
-        textprops={'fontsize': 10},
-    )
-    ax.set_title('Job Location Distribution', fontsize=16)
-    ax.legend(
-        wedges,
-        top_locations.index,
-        title="Locations",
-        loc="upper right",
-        bbox_to_anchor=(1.2, 0.9),
-        fontsize=9,
-    )
-    return figure
+
+        # Plot the pie chart
+        figure, ax = plt.subplots(figsize=(8, 8))
+        wedges, _ = ax.pie(
+            top_locations,
+            startangle=140,
+            wedgeprops=dict(width=0.4),  # Donut-style for better clarity
+        )
+        ax.set_title('Job Location Distribution', fontsize=16)
+
+        # Add a legend for the labels
+        ax.legend(
+            wedges,
+            top_locations.index,
+            title="Locations",
+            loc="upper left",
+            bbox_to_anchor=(1, 0.8),
+            fontsize=9,
+        )
+        return figure
+
+    except KeyError as e:
+        print("KeyError: Missing 'location_category' column in data. Please check the dataset.")
+        raise e
+    except Exception as e:
+        print("An error occurred while creating the pie chart:", str(e))
+        raise e
+
 
 
 def get_dates_figure(data):
